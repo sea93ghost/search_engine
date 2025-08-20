@@ -1,62 +1,51 @@
-import requests
+import feedparser
 import schedule
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
+import urllib.parse
 
-# Ganti dengan API Key Anda
-API_KEY = "6acfa02130c541bbac83ce7babb999ff"
-BASE_URL = "https://newsapi.org/v2/everything"
-KEYWORDS = ["oknum marinir", "marinir", "oknum tni", "oknum tni al"]  # bisa pakai spasi
+# Daftar keyword yang ingin dipantau
+KEYWORDS = ["oknum polisi", "pemilu 2025", "teknologi AI"]
 
-def cari_berita(keyword, jumlah=10):
-    waktu_sekarang = datetime.utcnow()
-    waktu_24jam = waktu_sekarang - timedelta(hours=24)
+def cari_berita(keyword):
+    # Buat URL RSS berdasarkan keyword
+    q = urllib.parse.quote(keyword)
+    url = f"https://news.google.com/rss/search?q={q}&hl=id&gl=ID&ceid=ID:id"
 
-    params = {
-        "q": keyword,
-        "apiKey": API_KEY,
-        "language": "id",
-        "sortBy": "publishedAt",
-        "pageSize": jumlah,
-        "from": waktu_24jam.strftime("%Y-%m-%dT%H:%M:%SZ")
-    }
-    response = requests.get(BASE_URL, params=params)
-    data = response.json()
-
-    if data.get("status") != "ok":
-        print(f"Gagal ambil data untuk '{keyword}': {data.get('message', '')}")
-        return []
-
+    feed = feedparser.parse(url)
     hasil = []
-    for artikel in data.get("articles", []):
+
+    for entry in feed.entries:
         hasil.append([
-            artikel.get("title", "—"),
-            artikel.get("source", {}).get("name", "—"),
-            artikel.get("url", "—"),
-            artikel.get("publishedAt", "—")
+            entry.title,      # Judul berita
+            entry.link,       # Link berita
+            entry.published   # Tanggal terbit
         ])
     return hasil
 
 def job():
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"\n⏳ Update berita otomatis ({now}), menampilkan berita 24 jam terakhir:")
+    waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"\n⏳ Update berita otomatis ({waktu})\n")
 
     for keyword in KEYWORDS:
-        berita = cari_berita(keyword, jumlah=10)
+        berita = cari_berita(keyword)
         if not berita:
-            print(f"\n⚠  Tidak ada berita untuk keyword: '{keyword}' dalam 24 jam terakhir.")
+            print(f"📌 Keyword: {keyword} → Tidak ada berita ditemukan\n")
             continue
 
-        print(f"\n📌 Keyword: {keyword} → {len(berita)} berita:")
-        for idx, (judul, sumber, url, tanggal) in enumerate(berita, start=1):
-            print(f"{idx}. {judul}")
-            print(f"   Sumber : {sumber}")
+        print(f"📌 Keyword: {keyword} (total {len(berita)} berita)\n")
+        for i, artikel in enumerate(berita[:10], 1):  # tampilkan 10 berita pertama
+            judul, url, tanggal = artikel
+            print(f"{i}. {judul}")
             print(f"   Link   : {url}")
-            print(f"   Tanggal: {tanggal}")
+            print(f"   Tanggal: {tanggal}\n")
 
 if __name__ == "__main__":
-    schedule.every(1).minutes.do(job)
-    print("Scheduler aktif ✅ (update setiap menit, tampil di terminal saja)")
+    # Jalankan tiap 30 menit
+    schedule.every(30).minutes.do(job)
+
+    print("Scheduler aktif ✅ (update berita tiap 30 menit, sumber: Google News RSS)")
+    job()  # jalankan sekali saat start
     while True:
         schedule.run_pending()
-        time.sleep(20)
+        time.sleep(30)
