@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 # Ganti dengan API Key Anda
 API_KEY = "6acfa02130c541bbac83ce7babb999ff"
 BASE_URL = "https://newsapi.org/v2/everything"
-KEYWORDS = ["oknum marinir", "oknum tni al", "oknum tni", "oknum aparat"]  # bisa pakai spasi
+KEYWORDS = ["oknum marinir", "marinir", "oknum tni", "oknum tni al"]  # bisa pakai spasi
 
 def cari_berita(keyword, jumlah=10):
     waktu_sekarang = datetime.utcnow()
