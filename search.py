@@ -10,7 +10,7 @@ API_KEY = "6acfa02130c541bbac83ce7babb999ff"
 BASE_URL = "https://newsapi.org/v2/everything"
 FILENAME = "hasil_berita_harian.xlsx"
 
-KEYWORDS = ["oknum polisi", "pemilu 2025", "teknologi AI"]  # daftar keyword
+KEYWORDS = ["oknum marinir", "oknum tni al", "oknum tni", "oknum aparat"]  # daftar keyword
 
 def cari_berita(keyword, jumlah=10):
     waktu_sekarang = datetime.utcnow()
