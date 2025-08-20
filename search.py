@@ -5,7 +5,7 @@ from datetime import datetime
 import urllib.parse
 
 # Daftar keyword yang ingin dipantau
-KEYWORDS = ["oknum polisi", "pemilu 2025", "teknologi AI"]
+KEYWORDS = ["oknum marinir", "oknum tni", "marinir"]
 
 def cari_berita(keyword):
     # Buat URL RSS berdasarkan keyword
