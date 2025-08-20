@@ -3,22 +3,27 @@ from openpyxl import Workbook, load_workbook
 import os
 import schedule
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Masukkan API Key Anda dari https://newsapi.org
 API_KEY = "6acfa02130c541bbac83ce7babb999ff"
 BASE_URL = "https://newsapi.org/v2/everything"
 FILENAME = "hasil_berita_harian.xlsx"
 
-KEYWORDS = ["oknum tni", "oknum marinir", "oknum tni al"]  # daftar keyword tetap
+KEYWORDS = ["oknum polisi", "pemilu 2025", "teknologi AI"]  # daftar keyword
 
 def cari_berita(keyword, jumlah=10):
+    waktu_sekarang = datetime.utcnow()
+    waktu_24jam = waktu_sekarang - timedelta(hours=24)
+
     params = {
         "q": keyword,
         "apiKey": API_KEY,
-        "language": "id",  # berita bahasa Indonesia
+        "language": "id",
         "sortBy": "publishedAt",
-        "pageSize": jumlah
+        "pageSize": jumlah,
+        "from": waktu_24jam.strftime("%Y-%m-%dT%H:%M:%S"),
+        "to": waktu_sekarang.strftime("%Y-%m-%dT%H:%M:%S")
     }
     response = requests.get(BASE_URL, params=params)
     data = response.json()
@@ -37,47 +42,56 @@ def cari_berita(keyword, jumlah=10):
         ])
     return hasil
 
-def simpan_excel_harian(keyword_list, jumlah=10):
-    # Jika file sudah ada → buka, kalau belum buat baru
+def simpan_excel(keyword, berita, tanggal_sheet):
     if os.path.exists(FILENAME):
         wb = load_workbook(FILENAME)
     else:
         wb = Workbook()
         wb.remove(wb.active)
 
+    sheet_name = (keyword[:20] + "_" + tanggal_sheet)[:31]
+
+    if sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+    else:
+        ws = wb.create_sheet(title=sheet_name)
+        ws.append(["Judul", "Sumber", "URL", "Tanggal"])
+
+    for row in berita:
+        ws.append(row)
+
+    wb.save(FILENAME)
+
+def job():
+    waktu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     tanggal_sheet = datetime.now().strftime("%Y-%m-%d")
 
-    for keyword in keyword_list:
-        berita = cari_berita(keyword.strip(), jumlah)
+    print(f"\n⏳ Update berita otomatis ({waktu})")
+
+    for keyword in KEYWORDS:
+        berita = cari_berita(keyword, jumlah=10)
         if not berita:
             continue
 
-        # Nama sheet gabungan: keyword + tanggal (maks 31 karakter)
-        sheet_name = (keyword[:20] + "_" + tanggal_sheet)[:31]
+        # === tampilkan hasil di terminal ===
+        print(f"\n📌 Keyword: {keyword} (24 jam terakhir, {len(berita)} berita)\n")
+        for i, artikel in enumerate(berita, 1):
+            judul, sumber, url, tanggal = artikel
+            print(f"{i}. {judul}")
+            print(f"   Sumber : {sumber}")
+            print(f"   Link   : {url}")
+            print(f"   Tanggal: {tanggal}\n")
 
-        if sheet_name in wb.sheetnames:
-            ws = wb[sheet_name]
-        else:
-            ws = wb.create_sheet(title=sheet_name)
-            ws.append(["Judul", "Sumber", "URL", "Tanggal"])
+        # simpan ke Excel
+        simpan_excel(keyword, berita, tanggal_sheet)
 
-        for row in berita:
-            ws.append(row)
-
-        print(f"[{tanggal_sheet}] Keyword '{keyword}' → {len(berita)} berita ditambahkan ke sheet '{sheet_name}'")
-
-    wb.save(FILENAME)
     print(f"✅ Data berita tersimpan ke {FILENAME}\n")
 
-def job():
-    print(f"\n⏳ Menjalankan update berita otomatis ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
-    simpan_excel_harian(KEYWORDS, jumlah=20)
-
 if __name__ == "__main__":
-    # Jadwalkan setiap hari jam 07:00
-    schedule.every().day.at("07:00").do(job)
+    # Jalankan tiap 1 menit
+    schedule.every(1).minutes.do(job)
 
-    print("Scheduler aktif ✅ (update berita jam 07:00 setiap hari)")
+    print("Scheduler aktif ✅ (update berita setiap menit, hanya 24 jam terakhir)")
     while True:
         schedule.run_pending()
         time.sleep(30)
