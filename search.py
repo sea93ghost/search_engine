@@ -22,8 +22,8 @@ def cari_berita(keyword, jumlah=10):
         "language": "id",
         "sortBy": "publishedAt",
         "pageSize": jumlah,
-        "from": waktu_24jam.strftime("%Y-%m-%dT%H:%M:%S"),
-        "to": waktu_sekarang.strftime("%Y-%m-%dT%H:%M:%S")
+        "from": waktu_24jam.strftime("%Y-%m-%dT%H:%M:%SZ")  # hanya "from"
+        # "to": waktu_sekarang.strftime("%Y-%m-%dT%H:%M:%SZ")  # optional
     }
     response = requests.get(BASE_URL, params=params)
     data = response.json()
