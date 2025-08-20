@@ -1,8 +1,17 @@
 import requests
-from openpyxl import Workbook
-# Masukkan API Key Anda (daftar gratis di https://newsapi.org)
+from openpyxl import Workbook, load_workbook
+import os
+import schedule
+import time
+from datetime import datetime
+
+# Masukkan API Key Anda dari https://newsapi.org
 API_KEY = "6acfa02130c541bbac83ce7babb999ff"
 BASE_URL = "https://newsapi.org/v2/everything"
+FILENAME = "hasil_berita_harian.xlsx"
+
+KEYWORDS = ["Jokowi", "Pemilu 2025", "Teknologi AI"]  # daftar keyword tetap
+
 def cari_berita(keyword, jumlah=10):
     params = {
         "q": keyword,
@@ -15,7 +24,7 @@ def cari_berita(keyword, jumlah=10):
     data = response.json()
 
     if data.get("status") != "ok":
-        print(f"Gagal mengambil data untuk '{keyword}':", data)
+        print(f"Gagal ambil data untuk '{keyword}':", data)
         return []
 
     hasil = []
@@ -28,35 +37,47 @@ def cari_berita(keyword, jumlah=10):
         ])
     return hasil
 
-def simpan_excel_multi(keyword_list, jumlah=10, filename="hasil_multi_keyword.xlsx"):
-    wb = Workbook()
-    wb.remove(wb.active)  # hapus sheet default
+def simpan_excel_harian(keyword_list, jumlah=10):
+    # Jika file sudah ada → buka, kalau belum buat baru
+    if os.path.exists(FILENAME):
+        wb = load_workbook(FILENAME)
+    else:
+        wb = Workbook()
+        wb.remove(wb.active)
+
+    tanggal_sheet = datetime.now().strftime("%Y-%m-%d")
 
     for keyword in keyword_list:
         berita = cari_berita(keyword.strip(), jumlah)
         if not berita:
             continue
 
-        # Buat sheet untuk keyword (maks 31 karakter sesuai batas Excel)
-        sheet_name = keyword[:31]
-        ws = wb.create_sheet(title=sheet_name)
+        # Nama sheet gabungan: keyword + tanggal (maks 31 karakter)
+        sheet_name = (keyword[:20] + "_" + tanggal_sheet)[:31]
 
-        # Header
-        ws.append(["Judul", "Sumber", "URL", "Tanggal"])
+        if sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+        else:
+            ws = wb.create_sheet(title=sheet_name)
+            ws.append(["Judul", "Sumber", "URL", "Tanggal"])
 
-        # Isi data
         for row in berita:
             ws.append(row)
 
-        print(f"Keyword '{keyword}' → {len(berita)} berita ditambahkan ke sheet '{sheet_name}'")
+        print(f"[{tanggal_sheet}] Keyword '{keyword}' → {len(berita)} berita ditambahkan ke sheet '{sheet_name}'")
 
-    wb.save(filename)
-    print(f"\n✅ Semua hasil pencarian berhasil disimpan ke: {filename}")
+    wb.save(FILENAME)
+    print(f"✅ Data berita tersimpan ke {FILENAME}\n")
 
-# Contoh penggunaan
+def job():
+    print(f"\n⏳ Menjalankan update berita otomatis ({datetime.now().strftime('%Y-%m-%d %H:%M:%S')})")
+    simpan_excel_harian(KEYWORDS, jumlah=20)
+
 if __name__ == "__main__":
-    keywords = input("Masukkan keyword pencarian (pisahkan dengan koma): ")
-    keyword_list = [k.strip() for k in keywords.split(",") if k.strip()]
-    
-    if keyword_list:
-        simpan_excel_multi(keyword_list, jumlah=20)
+    # Jadwalkan setiap hari jam 07:00
+    schedule.every().day.at("07:00").do(job)
+
+    print("Scheduler aktif ✅ (update berita jam 07:00 setiap hari)")
+    while True:
+        schedule.run_pending()
+        time.sleep(30)
