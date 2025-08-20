@@ -10,7 +10,7 @@ API_KEY = "6acfa02130c541bbac83ce7babb999ff"
 BASE_URL = "https://newsapi.org/v2/everything"
 FILENAME = "hasil_berita_harian.xlsx"
 
-KEYWORDS = ["tni", "marinir", "oknum"]  # daftar keyword tetap
+KEYWORDS = ["oknum tni", "oknum marinir", "oknum tni al"]  # daftar keyword tetap
 
 def cari_berita(keyword, jumlah=10):
     params = {
